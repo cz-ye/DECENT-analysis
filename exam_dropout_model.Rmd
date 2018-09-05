@@ -1,0 +1,308 @@
+---
+title: "exam_dropout_model"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = F, fig.width=12, fig.height=4)
+library(ggplot2)
+library(ggpubr)
+library(ggsci)
+library(cowplot)
+library(matrixStats)
+library(statmod)
+library(Seurat)
+```
+
+
+```{r Load data}
+setwd('/Users/ye.c/Desktop/Data/')
+
+getSpikeInMolecule <- function(m, n, d){
+  #' @param m vector of # attomole per microliter for each spike-in species in the mix
+  #' @param n volume of added spike-in mix (nL)
+  #' @param d dilution factor
+  m*n*(1/d)*1e-3*1e-18*6.02214129*1e23
+}
+sp.ref <- read.table("cms_095046.txt", sep='\t', row.names=1, header=T)
+
+# Zeisel
+# available from http://linnarssonlab.org/cortex/
+info <- read.table("info.txt", sep = '\t', row.names = 1, header=TRUE)
+info <- info[,-1]
+info <- as.data.frame(t(info))
+sp.table <- read.table("expression_spikes_17-Aug-2014.txt", sep='\t', row.names = 1, header = TRUE)
+sp.table <- sp.table[,-1]
+z.sp.obs <- sp.table[,info$level1class=='pyramidal CA1']
+z.sp.nom <- getSpikeInMolecule(sp.ref$concentration.in.Mix.1..attomoles.ul., 9, 20000)
+names(z.sp.nom) <- sp.ref$ERCC.ID
+z.sp.nom <- z.sp.nom[match(rownames(z.sp.obs), names(z.sp.nom))]
+
+# Tung
+# downloaded from https://github.com/jdblischak/singleCellSeq
+sc <- read.table('molecule-filtered.txt', sep='\t', header = T, row.names = 1)
+ind <- substr(colnames(sc), 1, 7)
+t.data.obs <- cbind(sc[, ind == 'NA19101'], sc[, ind == 'NA19239'])
+t.sp.obs <- t.data.obs[grepl('^ERCC', rownames(t.data.obs)), ]
+t.sp.nom <- getSpikeInMolecule(sp.ref$concentration.in.Mix.1..attomoles.ul., 13, 50000)
+names(t.sp.nom) <- sp.ref$ERCC.ID
+t.sp.nom <- t.sp.nom[match(rownames(t.sp.obs), names(t.sp.nom))]
+
+# Grun
+# GSE54695
+count <- read.table("GSE54695_data_transcript_counts.txt", sep='\t', row.names=1, header=T)
+g.data.obs <- count[,grepl("^SC", colnames(count))]
+g.data.obs <- g.data.obs[,-c(39,40,79,80,119,120,159,160)] # remove empty wells
+rm(count)
+g.data.obs <- as.matrix(round(256*(1-exp(-g.data.obs/256)))) # convert to original UMI count
+g.sp.obs <- g.data.obs[grepl("^ERCC", row.names(g.data.obs)),]
+g.sp.nom <- getSpikeInMolecule(sp.ref$concentration.in.Mix.1..attomoles.ul., 1000, 2500000)
+names(g.sp.nom) <- sp.ref$ERCC.ID
+g.sp.nom <- g.sp.nom[match(rownames(g.sp.obs), names(g.sp.nom))]
+
+# Klein
+# GSM1599501
+count <- read.csv("GSM1599501_K562_pure_RNA.csv", row.names=1, header=T)
+count <- count[rowSums(count)>1, ]
+k.sp.obs <- count[grepl("^ERCC-", row.names(count)),]
+rm(count)
+k.sp.nom <- getSpikeInMolecule(sp.ref$concentration.in.Mix.1..attomoles.ul., 1, 5000)
+names(k.sp.nom) <- sp.ref$ERCC.ID
+k.sp.nom <- k.sp.nom[match(rownames(k.sp.obs), names(k.sp.nom))]
+
+# Macosko
+# GSM1629193
+m.sp.obs <- read.table("GSM1629193_ERCC.digital_expression.txt", sep='\t', row.names=1, header=T)
+m.sp.nom <- getSpikeInMolecule(sp.ref$concentration.in.Mix.1..attomoles.ul., 1, 623) # 0.5 1/0.0032
+names(m.sp.nom) <- sp.ref$ERCC.ID
+m.sp.nom <- m.sp.nom[match(rownames(m.sp.obs), names(m.sp.nom))]
+
+# Zheng
+# available from https://support.10xgenomics.com/single-cell-gene-expression/datasets/1.1.0/ercc
+mat10x <- Seurat::Read10X('../10x_ercc/filtered_matrices_mex/ercc92/')
+count <- as.matrix(mat10x)
+zh.sp.obs <- count[rowSums(count)>1, ]
+rm(mat10x, count)
+zh.sp.nom <- getSpikeInMolecule(sp.ref$concentration.in.Mix.2..attomoles.ul., 1.1, 10*1.22*100 / 3)
+names(zh.sp.nom) <- sp.ref$ERCC.ID
+zh.sp.nom <- zh.sp.nom[match(rownames(zh.sp.obs), names(zh.sp.nom))]
+### Original codes for calculating nominal count for Zheng et al. data, from personal contact with the authors ###
+# #Dilution of “single-cell suspension” in mastermix
+# mastermix_gem_dilution_factor <- 100 / 3
+# 
+# # Effective dilution of “single-cell suspension” + mastermix inside GEM; this is a function of the microfluidics
+# gem_sample_dilution_factor <- 1.22
+# 
+# # GEM volume: 1.1nL
+# gem_volume_uL <- 1.1 / 1e3
+# 
+# # Scaling factor to convert ERCC concentration to molecules per GEM
+# ercc_conc_to_molecules <- (((1e6*1e6/1e18) / (mastermix_gem_dilution_factor * gem_sample_dilution_factor)) * gem_volume_uL / (1e6*1e6)) * 6.0221409e23
+# 
+# # Total sum of ERCC concentrations according to manufacturer’s datasheet. (The concentration of any particular ERCC can also be used.)
+# ercc_conc_attomol_per_uL <- 103515
+# 
+# # From the Zheng et al. Gemcode Single Cell paper. Note that this value is 0.125 for Svensson et al. in the higher-concentration Chromium library.
+# ercc_dilution <- 0.1
+# 
+# # Number of ERCC molecules per GEM w/ a given dilution from the ERCC tube
+# molecules_per_gem <- ercc_dilution * sp.ref$concentration.in.Mix.2..attomoles.ul. * ercc_conc_to_molecules
+```
+
+
+```{r Functions}
+
+# dbetabinom function for non-integer input
+dbetabinom3 <- function(x,prob,size,rho,log=TRUE) {
+  a <- prob*(1-rho)/rho ; b <- (1-prob)*(1-rho)/rho
+  corr.size <- ifelse(size<x,x,size)
+  logl <- lgamma(size+1) - lgamma(x+1) - lgamma(corr.size - x + 1) + lbeta(x+a,corr.size-x+b)-lbeta(a,b)
+  if(!log)
+    logl <- exp(logl)
+  return(logl)
+}
+
+dbetabinom2 <- function(x,prob,size,rho) {
+  a <- prob*(1-rho)/rho ; b <- (1-prob)*(1-rho)/rho
+  corr.size <- ifelse(size<x,x,size)
+  logl <- lgamma(size+1) - lgamma(x+1) - lgamma(corr.size - x + 1) + lbeta(x+a,corr.size-x+b)-lbeta(a,b)
+  return(exp(logl)*(x <= size))
+}
+
+dpois2 <- function(x, mu) {
+  logl <- -mu + x*log(mu) - lgamma(x + 1)
+  return(exp(logl))
+}
+
+# Beta-binomial-Poisson density
+dPOIBB <- function(x,lambda,CE,k,b,GQ.object,log=FALSE) {
+  minpt <- qpois(0.00005,lambda=lambda) - 0.5
+  minpt <- ifelse(minpt< -0.5,-0.5,minpt)
+  maxpt <- qpois(1-0.00005,lambda=lambda) + 0.5
+  maxpt <- ifelse(maxpt<2.5,2.5,maxpt)
+  rho <- (1+exp(-b-k*log(lambda)))^-1
+  new.nodes <- outer((maxpt-minpt)/2,GQ.object$nodes,'*') + (maxpt+minpt)/2
+  new.weight<- outer((maxpt-minpt)/2,GQ.object$weights,'*')
+  prob <- rowSums(dpois2(new.nodes,mu=lambda)*dbetabinom2(x,prob=CE,size=new.nodes,rho=rho)*new.weight)
+  if(log)
+    prob <- log(prob)
+  return(prob)
+}
+
+# Deviance under binomial dropout model
+POIbinom.dev <- function(x,size,CE) {
+  dev <- -2*(dpois(x,lambda=size*CE,log=TRUE)-dpois(x,lambda=x,log=TRUE))
+dev 
+}
+
+# Deviance under beta-binomial dropout model
+POIbbinom.dev <- function(x,size,CE,k,b) {
+  gq <- gauss.quad(16)
+  dev <- -2*(dPOIBB(x,lambda=size,CE=CE,k=k,b=b,GQ.object=gq,log=TRUE)-dPOIBB(x,lambda=x/CE,CE=CE,k=k,b=b,GQ.object=gq,log=TRUE))
+  dev.x0 <- -2*(dPOIBB(x,lambda=size,CE=CE,k=k,b=b,GQ.object=gq,log=TRUE)-dpois(x,lambda=x,log=TRUE))
+  dev <- ifelse(x==0,dev.x0,dev)
+dev 
+}
+
+# Cost function for estimating gene-specific rho_i
+bbinom.logl <- function(p, z, prob, size) {
+  logl <- rep(0, length(z))
+  if (p < -10 ){
+    logl <- dbinom(x = z, prob=prob, size=size, log = T)
+  } else {
+    rho  <- 1/(1+exp(-p))
+    logl <- VGAM::dbetabinom(x = z, prob=prob, size=size, rho=rho, log = T)
+  }
+  logl[is.infinite(logl)] <- log(.Machine$double.xmin)
+  # logl
+  -sum(logl)
+}
+
+# Cost function for estimating coefficients tau_{0j} and tau{1j}
+cbbinom.logl <- function(p, z, y, prob, c) {
+  logl <- sapply(1:nrow(y), function(i) {
+    if (1/(1+exp(-p[1]*log(c[i])-p[2])) < 1e-5 ){
+      return(dbinom(x = z[i], prob=prob, size=y[i, ], log = T))
+    } else {
+      return(VGAM::dbetabinom(x = z[i], prob=prob, size=y[i, ], rho=1/(1+exp(-p[1]*log(c[i])-p[2])), log = T))
+    }
+  })
+  logl[is.infinite(logl)] <- log(.Machine$double.xmin)
+  # logl
+  -sum(logl)
+}
+
+# Analysis function
+dropoutModelExam <- function(sp.obs, sp.nom) {
+  sp.obs <- as.matrix(sp.obs)
+  # spike-in filtering
+  f <- rowMeans(sp.obs) < sp.nom & sp.nom > 0.05
+  sp.obs <- sp.obs[f, ]
+  sp.nom <- sp.nom[f]
+  # cell filtering
+  lib.size <- colSums(sp.obs)
+  print(dim(sp.obs))
+  sp.obs <- sp.obs[, lib.size > median(lib.size) - 2*mad(lib.size)]
+  print(dim(sp.obs))
+    
+  CE <- colMeans(sp.obs)/mean(sp.nom)
+  ncell <- ncol(sp.obs)
+
+  ## deviance under binomial dropout model
+  dev.bin <- dev.bbinom <- sp.obs
+  for(i in 1:ncol(sp.obs)) {
+     dev.bin[,i]    <- POIbinom.dev(x=sp.obs[,i], size=sp.nom, CE=CE[i])
+  }
+  p1 <- ggdensity(data = data.frame(x = c(rchisq(1000000, df = nrow(sp.obs)-1), colSums(dev.bin)), 
+                              distribution = c(rep('Null', 1000000), rep('Observed', ncol(dev.bin)))),
+            x = 'x', xlab = 'Deviances', fill='distribution', color = 'distribution',
+            palette = c('gray', '#CD534CFF')) +
+    geom_vline(xintercept = nrow(sp.obs)-1, linetype = "longdash")
+  
+  ## estimate rho_i
+  est.rho.i <- matrix(0, 10, nrow(sp.obs))
+  for (s in 1:10){
+    set.seed(s)
+    y.rho <- t(sapply(1:nrow(sp.obs), function(i) rpois(ncol(sp.obs), sp.nom[i])))
+    est.rho.i[s, ] <- sapply(1:nrow(sp.obs), function(i) optimize(f=bbinom.logl, z=sp.obs[i, ], size=y.rho[i, ], prob=CE,
+                                                       lower=-10,upper=5)$minimum)
+  }
+  
+  ## estimate cell-specific tau
+  est.p <- matrix(0, ncell, 2)
+  for (j in 1:ncell) {
+    if(j%%100 == 1) message(j)
+    set.seed(7)
+    y.sim <- t(sapply(1:nrow(sp.obs), function(i) rpois(100, sp.nom[i])))
+    est.p[j, ] <- optim(par = c(-1,-3), f=cbbinom.logl, z=sp.obs[, j], y=y.sim, prob=CE[j], c=sp.nom)$p
+  }
+  
+  ## deviance under beta-binomial dropout model
+  for(i in 1:ncol(sp.obs)) {
+     dev.bbinom[,i] <- POIbbinom.dev(x=sp.obs[,i], size=sp.nom, CE=CE[i], k=est.p[i, 1], b=est.p[i, 2])
+  }
+  
+  ## estimated rho_i vs nominal count & fitted cell-specific rho model
+  p2 <- ggscatter(data = data.frame(x=log(sp.nom), y=colMeans(est.rho.i)), x = 'x', y = 'y',
+           color = "#3B3B3BFF") + 
+    stat_cor(method = "pearson", label.x.npc = 'right', label.y.npc = 'top', label.sep = '\n') +
+    geom_abline(data = data.frame(tau1 = est.p[,1], tau0 = est.p[, 2]), 
+                aes(slope = tau1, intercept = tau0), size = 0.05, col = "#0073C2FF", alpha = 0.25) +
+    labs(x = 'Log nominal spike-ins count', y = expression(Logit[' '](hat(rho)[i])))
+  cr <- cor.test(log(sp.nom), colMeans(est.rho.i))
+  print(c(cr$estimate, cr$p.value))
+
+  ## plot deviances under betabinom vs binom
+  pmain <- ggscatter(data = data.frame(x = log(colSums(dev.bin)/(nrow(sp.obs)-1)),
+                                     y = log(colSums(dev.bbinom)/(nrow(sp.obs)-3))),
+                   x = 'x', y = 'y', size = 0.3, alpha = 0.3, color = "#3B3B3BFF") +
+    geom_vline(xintercept = 0, linetype = "longdash", size = 0.7) + 
+    geom_hline(yintercept = 0, linetype = "longdash", size = 0.7) +
+    geom_abline(slope = 1, intercept = 0, size = 0.7, col='darkgray') +
+    xlim(c(min(-0.6, min(log(colSums(dev.bin)/(nrow(sp.obs)-1)))), max(log(colSums(dev.bin)/(nrow(sp.obs)-1)))+0.4)) +
+    ylim(c(min(-0.6, min(log(colSums(dev.bin)/(nrow(sp.obs)-1)))), max(log(colSums(dev.bin)/(nrow(sp.obs)-1)))+0.4)) +
+    xlab('Log(deviance/df) of binomial model') + ylab('Log(deviance/df) of beta-binomial model')
+  xdens <- axis_canvas(pmain, axis = "x") +
+    geom_density(data = data.frame(x = log(colSums(dev.bbinom)/(nrow(sp.obs)-1))), aes(x),
+                color = "white", fill = "white", alpha = 1, size = 0.2, show.legend = T) +
+    geom_density(data = data.frame(x = log(colSums(dev.bin)/(nrow(sp.obs)-3))), aes(x),
+                color = "red", fill = "#CD534CFF", alpha = 0.7, size = 0.2, show.legend = T) +
+    geom_vline(xintercept = 0, linetype = "longdash", size=0.7)
+  ydens <- axis_canvas(pmain, axis = "y", coord_flip = TRUE) +
+    geom_density(data = data.frame(x = log(colSums(dev.bbinom)/(nrow(sp.obs)-1))), aes(x),
+                color = "blue", fill = "#0073C2FF", alpha = 0.7, size = 0.2, show.legend = T) +
+    geom_vline(xintercept = 0, linetype = "longdash", size=0.7) + coord_flip()
+  p3a <- insert_xaxis_grob(pmain, xdens, grid::unit(.2, "null"), position = "top")
+  p3b <- insert_yaxis_grob(p3a, ydens, grid::unit(.2, "null"), position = "right")
+  p3 <- ggdraw(p3b)
+  
+  print(ggarrange(p1, p2, p3, ncol = 3, nrow = 1))
+  return(list(p1, p2, p3, sp.obs, sp.nom, CE))
+}
+
+```
+
+
+```{r Zeisel}
+z.out <- dropoutModelExam(z.sp.obs, z.sp.nom)
+```
+
+```{r Tung}
+t.out <- dropoutModelExam(t.sp.obs, t.sp.nom)
+```
+
+```{r Grun}
+g.out <- dropoutModelExam(g.sp.obs, g.sp.nom)
+```
+
+```{r Klein}
+k.out <- dropoutModelExam(k.sp.obs, k.sp.nom)
+```
+
+```{r Macosko}
+m.out <- dropoutModelExam(m.sp.obs, m.sp.nom)
+```
+
+```{r Zheng}
+zh.out <- dropoutModelExam(zh.sp.obs, zh.sp.nom)
+```

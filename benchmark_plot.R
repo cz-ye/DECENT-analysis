@@ -2,13 +2,13 @@ require(ggpubr)
 require(ZIM)
 
 
-load('scripts/Tung_benckmark.rda')
-load('scripts/Soumillon_benckmark.rda')
-load('scripts/Savas_benckmark.rda')
-load('scripts/Chen_benckmark.rda')
+load('Tung_benckmark.rda')
+load('Soumillon_benckmark.rda')
+load('Savas_benckmark.rda')
+load('Chen_benckmark.rda')
 
-load('scripts/fpr.plots.soumillon.rda')
-load('scripts/fpr.plots.tung.rda')
+load('fpr.plots.soumillon.rda')
+load('fpr.plots.tung.rda')
 
 
 # Main plot ROC

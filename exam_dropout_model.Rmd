@@ -16,7 +16,6 @@ library(Seurat)
 
 
 ```{r Load data}
-setwd('/Users/ye.c/Desktop/Data/')
 
 getSpikeInMolecule <- function(m, n, d){
   #' @param m vector of # attomole per microliter for each spike-in species in the mix

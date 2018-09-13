@@ -1,6 +1,6 @@
-R scripts for the analyses in the DECENT manuscript
+## R scripts for the analyses in the DECENT manuscript
 
-Scripts:
+### Scripts:
 `exam_dropout_model.Rmd`
 * Examine dropout model assumptions using ERCC spike-in data. 
 * Fig.1, sFig.1, sFig.2
@@ -41,7 +41,7 @@ Scripts:
 `func_de_methods.R`
 * Utility functions.
 
-Input data:
+### Input data:
 `data.savas.rds`
 * The UMI count matrix of the Savas et al. data.
 
@@ -59,7 +59,7 @@ Input data:
 
 * Other public data can be downloaded according to the comments in the scripts.
 
-Saved data:
+### Saved data:
 `Tung_benckmark.rda`
 `Soumillon_benckmark.rda`
 `Savas_benckmark.rda`
@@ -67,12 +67,12 @@ Saved data:
 `fpr.plots.tung.rda`
 `fpr.plots.soumillon.rda`
 
-DECENT output:
+### DECENT output:
 `sim/`
 `tung/`
 `tung_nb/`
 `zeisel/`
 `zeisel_nb/`
 
-TASC output:
+### TASC output:
 `tasc/`

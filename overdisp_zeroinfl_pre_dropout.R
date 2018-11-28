@@ -8,13 +8,16 @@ source('func_de_methods.R')
 ### Read data ###
 # Zeisel
 # available from http://linnarssonlab.org/cortex/
-info <- read.table("./info.txt", sep = '\t', row.names = 1, header=TRUE)
-info <- info[,-1]
-info <- as.data.frame(t(info))
-endo.table <- read.table("./expression_mRNA_17-Aug-2014.txt", sep='\t', row.names = 1, header = TRUE)
-endo.table <- as.matrix(endo.table[,-length(endo.table)])
-sp.table <- read.table("./expression_spikes_17-Aug-2014.txt", sep='\t', row.names = 1, header = TRUE)
-sp.table <- sp.table[,-1]
+endo.table <- read.table("./expression_mRNA_17-Aug-2014.txt", sep='\t', sep='\t', fill = T, as.is = T)
+sp.table <- read.table("./expression_spikes_17-Aug-2014.txt", sep='\t', sep='\t', fill = T, as.is = T)
+info <- endo.table[1:10, -c(1, 2)]
+rownames(info) <- endo.table[1:10, 2]
+endo.table <- endo.table[-1:-11, ]
+rownames(endo.table) <- endo.table[, 1]
+endo.table <- endo.table[, -c(1,2)]
+sp.table <- sp.table[-1:-11, ]
+rownames(sp.table) <- sp.table[, 1]
+sp.table <- sp.table[, -c(1,2)]
 
 # Lots of cells with extremely large proportion of spike-in counts. Remove those to alleviate.
 sp.endo.ratio <- colSums(sp.table)/colSums(endo.table)

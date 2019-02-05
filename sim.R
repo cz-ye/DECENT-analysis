@@ -42,7 +42,7 @@ decent.table.nsp.0.5x <- decent(data.obs, ~cell.type, CE.range = 0.5*range(CE), 
 decent.table.nsp.1.5x <- decent(data.obs, ~cell.type, CE.range = 1.5*range(CE), 'sim/nsp_1.5x/')
 decent.table <- decent(data.obs, ~cell.type, use.spikes = T, spikes = sp.obs, spike.conc = sp.nom, tau.est = 'spikes',
                        s.imputed = T, E.imputed = T, dir = 'sim/sp/')
-decent.table <- decent(data.obs, ~cell.type, use.spikes = T, spikes = sp.obs, spike.conc = sp.nom, dir = 'sim/sp_tau/')
+decent.table2 <- decent(data.obs, ~cell.type, use.spikes = T, spikes = sp.obs, spike.conc = sp.nom, dir = 'sim/sp_tau/')
 
 out.em <- readRDS('sim/sp/decent.noDE.rds')
 out.lrt <- readRDS('sim/sp/decent.lrt.rds')

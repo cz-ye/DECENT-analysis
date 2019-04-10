@@ -5,7 +5,7 @@ source('func_de_methods.R')
 
 ### Read data ###
 
-load('DECENT-sim/simdata_ZINB_BB_Tung6_OD_kb.RData')
+load('simdata_ZINB_BB_Tung6_OD_kb.RData')
 
 data.obs <- data.obs[rowSums(data.obs > 0) >= 3,]
 sp.obs <- ercc.obs[rowSums(ercc.obs) != 0, ]
@@ -37,6 +37,7 @@ mst.table <- runMASTDE(data.obs, ctype)
 scde.table <- runSCDE(data.obs, ctype)
 
 # DECENT
+cell.type <- as.factor(ctype)
 decent.table.nsp <- decent(data.obs, ~cell.type, CE.range = range(CE), dir = 'sim/nsp/')
 decent.table.nsp.0.5x <- decent(data.obs, ~cell.type, CE.range = 0.5*range(CE), 'sim/nsp_0.5x/')
 decent.table.nsp.1.5x <- decent(data.obs, ~cell.type, CE.range = 1.5*range(CE), 'sim/nsp_1.5x/')

@@ -41,6 +41,12 @@
 `func_de_methods.R`
 * Utility functions.
 
+`sim_rep.R`
+* Repeat simulation study 20 times.
+
+`r1_plots.R`
+* New plots for revision 1.
+
 ### Input data:
 `data.savas.rds`
 * The UMI count matrix of the Savas et al. data.
@@ -51,13 +57,16 @@
 `simdata_ZINB_BB_Tung6_OD_kb.RData`
 * Simulated dataset.
 
+`simdata_ZINB_BB_Tung6_OD_kb_010119/`
+* Another 20 simulated datasets.
+
 `ercc_length.txt`
 * Lengths of ERCC spike-ins.
 
 `cms_095046.txt`
 * Information of ERCC spike-in mix.
 
-* Other public data can be downloaded according to the comments in the scripts.
+* Other input data can be directly downloaded from public repositories as noted in the scripts.
 
 ### Saved data:
 `Tung_benckmark.rda`
@@ -71,6 +80,9 @@
 `sim/`
 `tung/`
 `tung_nb/`
+`soumillon/`
+`savas/`
+`chen/`
 `zeisel/`
 `zeisel_nb/`
 

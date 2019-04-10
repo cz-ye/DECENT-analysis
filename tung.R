@@ -137,7 +137,7 @@ lib.sf <- lib.sf/mean(lib.sf)
 vios <- list()
 for (g in u.gene) {
   vios[[g]] <- obsVsInf(g, t(apply(data.obs, 1, function(x)x/lib.sf)),
-                        data.mimp, cell.type)
+                        data.imp, cell.type)
 }
 vios[['ncol']] <- 2; vios[['nrow']] <- 4
 do.call(ggarrange, args = vios[!names(vios) %in% c('ENSG00000132406', 'ENSG00000183688')])
@@ -200,8 +200,8 @@ qq <- function(pvector, group, title="Quantile-quantile plot of p-values") {
 }
 
 p1 <- 
-ggarrange(qq(out.ctrl.sp[[11]]$pval[out.ctrl.sp[[11]]$pval > 1e-10], title = 'DECENT sp'),
-          qq(out.ctrl.sp[[11]]$pval[out.ctrl.sp[[11]]$pval > 1e-10], title = 'DECENT nsp'),
+ggarrange(qq(decent.ctrl[[11]]$pval[decent.ctrl[[11]]$pval > 1e-10], title = 'DECENT sp'),
+          qq(decent.ctrl.nsp[[11]]$pval[decent.ctrl.nsp[[11]]$pval > 1e-10], title = 'DECENT nsp'),
           qq(mst.ctrl[[11]]$`Pr(>Chisq)`[mst.ctrl[[11]]$`Pr(>Chisq)` > 1e-10], title = 'MAST'),
           qq(scde.ctrl[[11]]$pval[scde.ctrl[[11]]$pval > 1e-10], title = 'SCDE'),
           qq(mnc.ctrl[[11]]$pval[mnc.ctrl[[11]]$pval > 1e-10], title = 'Monocle2'),
@@ -241,6 +241,6 @@ p2.fpr.t <- ggboxplot(data = data.frame(FPR=c(sapply(1:20, function(i) mean(out.
 
 save(p1.fpr.t, p2.fpr.t, file = './scripts/fpr.plots.tung.rda')
 
-# ggarrange(p1 + theme(plot.margin = margin(l = 5, t = 5)), 
-#           p2 + theme(plot.margin = margin(l = 5, t = 10, r= 10, b=30)), 
-#           nrow=2, ncol=1, labels = 'auto', font.label = list(size=16))
+ ggarrange(p1.fpr.t + theme(plot.margin = margin(l = 5, t = 5)), 
+           p2.fpr.t + theme(plot.margin = margin(l = 5, t = 10, r= 10, b=30)), 
+           nrow=2, ncol=1, labels = 'auto', font.label = list(size=16))

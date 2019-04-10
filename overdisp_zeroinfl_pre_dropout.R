@@ -8,22 +8,25 @@ source('func_de_methods.R')
 ### Read data ###
 # Zeisel
 # available from http://linnarssonlab.org/cortex/
-endo.table <- read.table("./expression_mRNA_17-Aug-2014.txt", sep='\t', sep='\t', fill = T, as.is = T)
-sp.table <- read.table("./expression_spikes_17-Aug-2014.txt", sep='\t', sep='\t', fill = T, as.is = T)
+endo.table <- read.table("./expression_mRNA_17-Aug-2014.txt", sep='\t', fill = T, as.is = T)
+sp.table <- read.table("./expression_spikes_17-Aug-2014.txt", sep='\t', fill = T, as.is = T)
 info <- endo.table[1:10, -c(1, 2)]
 rownames(info) <- endo.table[1:10, 2]
-endo.table <- endo.table[-1:-11, ]
+endo.table <- as.matrix(endo.table[-1:-11, ])
 rownames(endo.table) <- endo.table[, 1]
 endo.table <- endo.table[, -c(1,2)]
 sp.table <- sp.table[-1:-11, ]
 rownames(sp.table) <- sp.table[, 1]
-sp.table <- sp.table[, -c(1,2)]
+sp.table <- as.matrix(sp.table[, -c(1,2)])
+mode(sp.table) <- 'numeric' 
+mode(endo.table) <- 'numeric'
 
 # Lots of cells with extremely large proportion of spike-in counts. Remove those to alleviate.
-sp.endo.ratio <- colSums(sp.table)/colSums(endo.table)
-endo.table <- endo.table[, sp.endo.ratio < 1]
-sp.table <- sp.table[, sp.endo.ratio < 1]
-info <- info[sp.endo.ratio < 1, ]
+#sp.endo.ratio <- colSums(sp.table)/colSums(endo.table)
+#endo.table <- endo.table[, sp.endo.ratio < 1]
+#sp.table <- sp.table[, sp.endo.ratio < 1]
+
+info <- as.data.frame(t(info))
 
 endo.table <- endo.table[rowSums(endo.table) !=0, ]
 cut <- median(log(rowSums(endo.table))) - mad(log(rowSums(endo.table)))
@@ -42,10 +45,10 @@ ind <- sample(seq_len(ncol(data.z)), size = floor(0.5 * ncol(data.z)))
 cell.type <- rep(1, ncol(data.z))
 cell.type[ind] <- 2
 
-out <- decent(data.obs = as.matrix(data.z), X = ~as.factor(cell.type), tau.global = F, tau.init = c(-5, -1),
+out <- decent(data.obs = as.matrix(data.z), X = ~as.factor(cell.type), tau.global = F, #tau.init = c(-5, -1),
               use.spikes = T, spikes = as.matrix(sp.obs), spike.conc = sp.ref,
               dir = './zeisel/')
-out <- decentnb(data.obs = as.matrix(data.z), X = ~as.factor(cell.type), tau.global = F, tau.init = c(-5, -1),
+out <- decentnb(data.obs = as.matrix(data.z), X = ~as.factor(cell.type), tau.global = F, #tau.init = c(-5, -1),
               use.spikes = T, spikes = as.matrix(sp.obs), spike.conc = sp.ref,
               dir = './zeisel_nb/')
 
@@ -93,8 +96,9 @@ p1.t <-
 'limegreen'
 
 # observed vs expected
+var.pois <- mean(CE*sf)*mu + var(CE*sf)*mu^2 + rowMeans((mu^2 %o% (CE*(1-CE) * sf^2)) * rho)
 p2.t <- 
-ggscatter(data = data.frame(x=log10(mean(CE*sf)*mu + var(CE*sf)*mu^2 + rowMeans((mu^2 %o% (CE*(1-CE) * sf^2)) * rho)), 
+ggscatter(data = data.frame(x=log10(var.pois), 
                             y=log10(var.gene)), x='x', y='y', 
           xlab ='Log10 expected variance', ylab='Log10 observed variance', 
           size=0.1, title = expression('Pre-dropout dispersion'~psi[i]~'='~0)) +
@@ -247,10 +251,10 @@ rho.zinb <- rep(1, nrow(data.z)) %o% tau0 + (1-pi0)*out.zinb.z$par.noDE[,2] %o% 
 rho.zinb <- 1/(1+exp(-rho.zinb))
 
 z.zf1 <- decentGOF(138, data.z, out.zinb.z$par.noDE, out.nb.z$par.noDE, out.em.zinb.z$est.sf, out.em.nb.z$est.sf,
-                   out.em.zinb.z$CE, out.em.nb.z$CE, rho.zinb, rho, plot = F) #
-z.zf2 <- decentGOF(3043, data.z, out.zinb.z$par.noDE, out.nb.z$par.noDE, out.em.zinb.z$est.sf, out.em.nb.z$est.sf,
                    out.em.zinb.z$CE, out.em.nb.z$CE, rho.zinb, rho, plot = F)
-
+z.zf2 <- decentGOF(6990, data.z, out.zinb.z$par.noDE, out.nb.z$par.noDE, out.em.zinb.z$est.sf, out.em.nb.z$est.sf,
+                   out.em.zinb.z$CE, out.em.nb.z$CE, rho.zinb, rho, plot = F)
+#3043 lpl
 
 # Chi-square test
 z1.pval.nb <- bin.chisq.test(z.zf1[[3]], z.zf1[[1]], 2)
@@ -261,7 +265,7 @@ z2.pval.zinb <- bin.chisq.test(z.zf2[[2]], z.zf2[[1]], 3)
 
 # plot
 p4.z <- distPlot(z.zf1, 'Xist')
-p5.z <- distPlot(z.zf2, 'Lpl')
+p5.z <- distPlot(z.zf2, '4930447C04Rik')
 
 ### combine plots ###
 ggarrange(p1.z + theme(plot.margin = margin(10, 0, 0, 15)), p2.z, p3.z, 
@@ -271,7 +275,7 @@ ggarrange(p1.z + theme(plot.margin = margin(10, 0, 0, 15)), p2.z, p3.z,
 # 9.5 7
 # 950 700
 
-ggarrange(p4.t , p5.t, 
+ggarrange(p4.t , p5.t,
           p4.z , p5.z, ncol = 2, nrow = 2,
           labels = c('a', '', 'b', ''), font.label = list(size=18), common.legend = T, legend = 'right')
 

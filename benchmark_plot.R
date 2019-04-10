@@ -176,3 +176,4 @@ ggarrange(ac, bd,
           ncol=2, nrow=1, widths = c(8, 6))
 
 # 11 7.6
+# 1100 760

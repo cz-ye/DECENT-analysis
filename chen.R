@@ -1,6 +1,7 @@
 require(DECENT)
 require(limma)
 require(edgeR)
+require(Seurat)
 source('func_de_methods.R')
 
 ### Read data ###
@@ -10,6 +11,8 @@ colnames(cluster) <- cluster[1, ]
 cluster <- cluster[-1, ]
 cluster$barcode <- substr(cluster$barcode, 1, 16)
 
+# UMI count matrix can be downloaded from https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE113660
+sc <- Seurat::Read10X('mex/') # '/mex' is the directory containing the 3 files in "GSE113660_RAW.tar"
 sc <- sc[, colnames(sc) %in% cluster$barcode]
 sc <- sc[rowSums(sc) > 0, ]
 cut <- log10(rowSums(sc)) > 2
